@@ -14,6 +14,22 @@ use tauri_plugin_dialog::DialogExt;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+// Windows平台需要导入这个trait才能使用creation_flags方法
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+/// Windows平台辅助函数：给Command加CREATE_NO_WINDOW标志，避免弹出黑窗口
+#[cfg(target_os = "windows")]
+fn no_window(cmd: &mut Command) -> &mut Command {
+    cmd.creation_flags(CREATE_NO_WINDOW)
+}
+
+/// 非Windows平台占位函数，什么都不做
+#[cfg(not(target_os = "windows"))]
+fn no_window(cmd: &mut Command) -> &mut Command {
+    cmd
+}
+
 /// 支持的输出格式列表
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FormatItem {
@@ -76,9 +92,7 @@ fn is_runnable_ffmpeg(path: &Path) -> bool {
     if is_placeholder_file(path) { return false; }
     let mut cmd = Command::new(path);
     cmd.arg("-version").stdout(Stdio::null()).stderr(Stdio::null()).stdin(Stdio::null());
-    // Windows: 隐藏黑窗口
-    #[cfg(target_os = "windows")]
-    { cmd.creation_flags(CREATE_NO_WINDOW); }
+    no_window(&mut cmd);
     cmd.status().map(|s| s.success()).unwrap_or(false)
 }
 
@@ -110,8 +124,7 @@ pub fn locate_ffmpeg(app: &AppHandle) -> Option<(PathBuf, &'static str)> {
     let (wc, wa) = if cfg!(target_os = "windows") { ("where", "ffmpeg") } else { ("which", "ffmpeg") };
     let mut which_cmd = Command::new(wc);
     which_cmd.arg(wa).stdout(Stdio::piped()).stderr(Stdio::null()).stdin(Stdio::null());
-    #[cfg(target_os = "windows")]
-    { which_cmd.creation_flags(CREATE_NO_WINDOW); }
+    no_window(&mut which_cmd);
     if let Ok(o) = which_cmd.output() {
         if o.status.success() {
             if let Some(line) = String::from_utf8_lossy(&o.stdout).lines().next() {
@@ -138,8 +151,7 @@ pub fn check_ffmpeg(app: AppHandle, state: tauri::State<'_, AppState>) -> Ffmpeg
     };
     let mut cmd = Command::new(&path);
     cmd.arg("-version").stdout(Stdio::piped()).stderr(Stdio::null()).stdin(Stdio::null());
-    #[cfg(target_os = "windows")]
-    { cmd.creation_flags(CREATE_NO_WINDOW); }
+    no_window(&mut cmd);
     let ver_output = cmd.output().ok();
     let version = ver_output.and_then(|o| {
         String::from_utf8_lossy(&o.stdout).lines().next().map(|l| l.to_string())
@@ -238,8 +250,7 @@ fn spawn_ffmpeg(exe: &Path, args: &[String]) -> std::io::Result<Child> {
        .stdin(Stdio::null())
        .stdout(Stdio::piped())
        .stderr(Stdio::piped());
-    #[cfg(target_os = "windows")]
-    { cmd.creation_flags(CREATE_NO_WINDOW); }
+    no_window(&mut cmd);
     cmd.spawn()
 }
 
@@ -727,14 +738,15 @@ fn kill_process(pid: u32) {
     if cfg!(target_os = "windows") {
         let mut cmd = Command::new("taskkill");
         cmd.args(["/PID", &pid.to_string(), "/F", "/T"]);
-        #[cfg(target_os = "windows")]
-        { cmd.creation_flags(CREATE_NO_WINDOW); }
+        no_window(&mut cmd);
         cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
         let _ = cmd.status();
     } else {
-        let _ = Command::new("kill").arg(pid.to_string())
-            .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null())
-            .status();
+        let mut cmd = Command::new("kill");
+        cmd.arg(pid.to_string())
+            .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
+        no_window(&mut cmd);
+        let _ = cmd.status();
     }
 }
 
@@ -833,13 +845,18 @@ pub fn open_url(url: String) -> Result<(), String> {
     let res = if cfg!(target_os = "windows") {
         let mut c = Command::new("cmd");
         c.args(["/C", "start", "", &url]);
-        #[cfg(target_os = "windows")]
-        { c.creation_flags(CREATE_NO_WINDOW); }
+        no_window(&mut c);
         c.spawn()
     } else if cfg!(target_os = "macos") {
-        Command::new("open").arg(&url).spawn()
+        let mut c = Command::new("open");
+        c.arg(&url);
+        no_window(&mut c);
+        c.spawn()
     } else {
-        Command::new("xdg-open").arg(&url).spawn()
+        let mut c = Command::new("xdg-open");
+        c.arg(&url);
+        no_window(&mut c);
+        c.spawn()
     };
     res.map(|_| ()).map_err(|e| format!("打开链接失败：{e}"))
 }
