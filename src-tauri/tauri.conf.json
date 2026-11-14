@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "视频格式转换器",
+  "productName": "VideoConverter",
   "version": "1.0.1",
-  "identifier": "com.video.converter",
+  "identifier": "com.rosw.video.converter",
   "build": {
     "frontendDist": "../src"
   },
