@@ -122,7 +122,7 @@ fn main() {
     println!("cargo:rustc-env=BUILD_TARGET_TRIPLE={triple}");
     // 下载完 ffmpeg 后无需 cargo clean，直接重新触发构建脚本即可
     println!("cargo:rerun-if-changed=binaries");
-
-    ensure_sidecar(&triple);
+    // 不打包了
+    //ensure_sidecar(&triple);
     tauri_build::build();
 }

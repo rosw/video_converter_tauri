@@ -41,7 +41,6 @@
     "shortDescription": "基于 FFmpeg 的极简视频格式转换工具",
     "longDescription": "内置 FFmpeg，开箱即用。支持 12 种视频、5 种音频格式互转，界面简洁清爽，支持一键取消。",
     "externalBin": [
-      "binaries/ffmpeg"
     ],
     "windows": {
       "webviewInstallMode": {
