@@ -1,0 +1,32 @@
+[package]
+name = "video-converter"
+version = "1.0.1"
+description = "基于 FFmpeg 的极简视频格式转换工具"
+authors = ["you"]
+edition = "2021"
+# Tauri 2 自 2.10 版起最低要求 Rust 1.90（tauri-build 2.7+ / tauri-plugin-dialog 2.8+ 同步抬高）。
+# 若这里报「cannot be built because it requires rustc 1.90 or newer」，
+# 说明本地工具链偏旧，请执行：rustup update stable
+rust-version = "1.90"
+
+[lib]
+name = "video_converter_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+tokio = { version = "1", features = ["sync"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
